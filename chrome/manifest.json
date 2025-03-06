@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "LLM translator",
+  "version": "1.0",
+  "description": "大语言模型的文本翻译插件",
+  "permissions": ["activeTab", "scripting", "contextMenus"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "commands": {
+    "llm_translate_shortcut": {
+      "suggested_key": {
+        "default": "Alt+T"
+      },
+      "description": "大语言模型的文本翻译插件"
+    }
+  },
+  "action": {
+    "default_popup": "popup.html"
+  }
+}
