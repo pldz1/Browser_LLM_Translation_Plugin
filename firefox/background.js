@@ -1,21 +1,20 @@
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({
+browser.runtime.onInstalled.addListener(() => {
+  browser.contextMenus.create({
     id: "llm_translate_contextmenu",
     title: "Using LLM translate selected content.",
-    // 仅在有选中文本时显示
     contexts: ["selection"],
   });
 });
 
-// 右键开始行为
-chrome.contextMenus.onClicked.addListener(async (info) => {
+// 右键菜单点击
+browser.contextMenus.onClicked.addListener(async (info) => {
   if (info.menuItemId === "llm_translate_contextmenu") {
     await translateText();
   }
 });
 
-// 快捷键行为
-chrome.commands.onCommand.addListener(async (command) => {
+// 快捷键监听
+browser.commands.onCommand.addListener(async (command) => {
   if (command === "llm_translate_shortcut") {
     await translateText();
   }
@@ -23,47 +22,46 @@ chrome.commands.onCommand.addListener(async (command) => {
 
 // 执行翻译
 async function translateText() {
-  let [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  let [tab] = await browser.tabs.query({ active: true, currentWindow: true });
   if (tab) {
     try {
       // 显示加载动画
-      await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: showLoadingIndicator,
+      await browser.tabs.executeScript(tab.id, {
+        code: `(${showLoadingIndicator.toString()})()`,
       });
 
       // 获取选中的文本
-      const results = await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: getSelectedText,
+      const results = await browser.tabs.executeScript(tab.id, {
+        code: `(${getSelectedText.toString()})()`,
       });
 
-      if (results && results[0] && results[0].result) {
-        const selectedText = results[0].result;
+      if (results && results[0]) {
+        const selectedText = results[0];
         const translatedText = await fetchLLM(selectedText);
         if (!translatedText) return;
-        // 从 storage 中读取 replace 的值，默认 false
+
+        // 获取是否需要替换原文本
         const { replaceText = false } = await getStorageData(["replaceText"]);
-        // 根据 replace 值调用不同的显示逻辑
-        await chrome.scripting.executeScript({
-          target: { tabId: tab.id },
-          args: [translatedText, replaceText],
-          func: processTranslation,
+
+        // 处理翻译文本
+        await browser.tabs.executeScript(tab.id, {
+          code: `(${processTranslation.toString()})(${JSON.stringify(
+            translatedText
+          )}, ${replaceText})`,
         });
       }
     } catch (error) {
-      console.error("翻译过程中出现错误：", error);
+      console.error("翻译失败：", error);
     } finally {
-      // 无论成功与否，都移除 loader
-      await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: removeLoader,
+      // 移除加载动画
+      await browser.tabs.executeScript(tab.id, {
+        code: `(${removeLoader.toString()})()`,
       });
     }
   }
 }
 
-// 在选中区域旁边显示加载动画
+// 选中区域旁边显示加载动画
 function showLoadingIndicator() {
   const selection = window.getSelection();
   if (selection.rangeCount > 0) {
@@ -73,19 +71,18 @@ function showLoadingIndicator() {
     loader.id = "llm_translate_loader";
     loader.innerHTML = "🔄";
     loader.style.cssText = `
-      position: absolute;
-      top: ${rect.bottom + window.scrollY + 5}px;
-      left: ${rect.left + window.scrollX}px;
-      background: #0b57d0;
-      padding: 5px 10px;
-      border-radius: 5px;
-      font-size: 12px;
-      font-weight: bold;
-      color: black;
-      z-index: 10000;
-      box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.3);
-      transition: opacity 0.3s ease-out;
-    `;
+        position: absolute;
+        top: ${rect.bottom + window.scrollY + 5}px;
+        left: ${rect.left + window.scrollX}px;
+        background: #0b57d0;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-size: 12px;
+        font-weight: bold;
+        color: white;
+        z-index: 10000;
+        box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.3);
+      `;
     document.body.appendChild(loader);
     return selection.toString();
   }
@@ -116,12 +113,10 @@ function getSelectedText() {
   }
 }
 
-// 在页面中处理翻译后的显示：替换文本或显示悬浮 div
+// 处理翻译文本
 function processTranslation(translation, replaceFlag) {
   if (replaceFlag) {
-    // 替换选中的文本
     if (!translation) return;
-
     const activeElement = document.activeElement;
 
     if (
@@ -146,12 +141,13 @@ function processTranslation(translation, replaceFlag) {
       }
     }
   } else {
-    // 如果已有悬浮 div 存在，先移除
+    // 移除已有翻译窗口
     const existingDiv = document.getElementById("llm_translate_div");
     if (existingDiv) {
       existingDiv.remove();
     }
-    // 在选中的文本下方显示一个悬浮 div
+
+    // 显示翻译结果
     const selection = window.getSelection();
     if (selection.rangeCount > 0) {
       const range = selection.getRangeAt(0);
@@ -164,30 +160,30 @@ function processTranslation(translation, replaceFlag) {
       const closeButton = document.createElement("button");
       closeButton.textContent = "X";
       closeButton.style.cssText = `
-          position: absolute;
-          top: 0;
-          right: 0;
-          cursor: pointer;
-          border: none;
-          background: transparent;
-          font-size: 12px;
-          font-weight: bold;
-      `;
+            position: absolute;
+            top: 0;
+            right: 0;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            font-size: 12px;
+            font-weight: bold;
+        `;
       closeButton.addEventListener("click", () => {
         div.remove();
       });
 
       div.style.cssText = `
-          position: absolute;
-          background-color: yellow;
-          border: 1px solid black;
-          padding: 20px 5px 5px 5px;
-          box-sizing: border-box;
-          max-width: 400px;
-      `;
+            position: absolute;
+            background-color: yellow;
+            border: 1px solid black;
+            padding: 20px 5px 5px 5px;
+            box-sizing: border-box;
+            max-width: 400px;
+        `;
       div.appendChild(closeButton);
 
-      // 设置 div 的位置：位于选中区域下方
+      // 设置 div 的位置
       div.style.top = rect.bottom + window.scrollY + "px";
       div.style.left = rect.left + window.scrollX + "px";
 
@@ -196,21 +192,18 @@ function processTranslation(translation, replaceFlag) {
   }
 }
 
-// 将 chrome.storage.local.get 封装为返回 Promise 的函数
+// 获取存储数据
 function getStorageData(keys) {
-  return new Promise((resolve, reject) => {
-    chrome.storage.local.get(keys, function (result) {
-      if (chrome.runtime.lastError) {
-        return reject(chrome.runtime.lastError);
-      }
+  return new Promise((resolve) => {
+    browser.storage.local.get(keys, function (result) {
       resolve(result);
     });
   });
 }
 
+// 发送请求到 LLM 进行翻译
 async function fetchLLM(data) {
   try {
-    // 从 storage 中读取接口、apikey 和目标语言
     const {
       endpoint = "",
       apikey = "",
@@ -218,43 +211,41 @@ async function fetchLLM(data) {
     } = await getStorageData(["endpoint", "apikey", "target"]);
     if (!endpoint || !apikey || !target) {
       return "关键参数没有设置完全";
-    } else {
-      const language = target === "cn" ? "中文" : "英语";
-      const response = await fetch(`${endpoint}`, {
-        headers: {
-          accept: "application/json",
-          "api-key": `${apikey}`,
-          "content-type": "application/json",
-        },
-        referrerPolicy: "strict-origin-when-cross-origin",
-        body: JSON.stringify({
-          messages: [
-            {
-              role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: `请帮我把这个: ${data} 翻译为专业的${language}, 注意直接输出你翻译的结果即可, 不需要任何其他的内容!`,
-                },
-              ],
-            },
-          ],
-        }),
-        method: "POST",
-        mode: "cors",
-        credentials: "omit",
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      // 确保返回翻译结果
-      return result.choices[0].message.content;
     }
+
+    const language = target === "cn" ? "中文" : "英语";
+    const response = await fetch(endpoint, {
+      headers: {
+        Accept: "application/json",
+        "api-key": apikey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `请帮我把这个: ${data} 翻译为专业的${language}, 直接输出翻译结果!`,
+              },
+            ],
+          },
+        ],
+      }),
+      method: "POST",
+      mode: "cors",
+      credentials: "omit",
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result.choices[0].message.content || "翻译失败";
   } catch (error) {
     console.error("获取存储数据出错：", error);
-    return null;
+    return "获取存储数据出错";
   }
 }

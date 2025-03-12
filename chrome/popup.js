@@ -4,6 +4,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const apikeyInput = document.getElementById("apikey-input");
   const targetSelect = document.getElementById("target-language-select");
   const translateButton = document.getElementById("start-translate");
+  const translateTextarea = document.getElementById("translate-textarea");
+  const translateReplace = document.getElementById("replace-text-checkbox");
   const resultSpan = document.getElementById("res-span");
 
   // 检查是否所有关键元素都存在
@@ -12,6 +14,8 @@ document.addEventListener("DOMContentLoaded", function () {
     !apikeyInput ||
     !targetSelect ||
     !translateButton ||
+    !translateTextarea ||
+    !translateReplace ||
     !resultSpan
   ) {
     console.error("部分必要的 DOM 元素不存在，请检查 popup.html 文件的结构。");
@@ -20,17 +24,23 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // 从 chrome 存储中读取保存的数据，并填充到对应输入框
-  chrome.storage.local.get(["endpoint", "apikey", "target"], function (result) {
-    if (result.endpoint) {
-      endpointInput.value = result.endpoint;
+  chrome.storage.local.get(
+    ["endpoint", "apikey", "target", "replaceText"],
+    function (result) {
+      if (result.endpoint) {
+        endpointInput.value = result.endpoint;
+      }
+      if (result.apikey) {
+        apikeyInput.value = result.apikey;
+      }
+      if (result.target) {
+        targetSelect.value = result.target;
+      }
+      if (result.replaceText) {
+        translateReplace.checked = result.replaceText;
+      }
     }
-    if (result.apikey) {
-      apikeyInput.value = result.apikey;
-    }
-    if (result.target) {
-      targetSelect.value = result.target;
-    }
-  });
+  );
 
   // 当 endpoint 输入框内容发生变化时，自动保存到 chrome 存储
   endpointInput.addEventListener("change", function () {
@@ -56,11 +66,19 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
+  // 替换操作有变化
+  translateReplace.addEventListener("change", function () {
+    const replaceText = translateReplace.checked;
+    chrome.storage.local.set({ replaceText: replaceText }, function () {
+      console.log("替换文本操作 更新成功: ", replaceText);
+    });
+  });
+
   // 点击翻译按钮时执行
   translateButton.addEventListener("click", async function () {
     translateButton.textContent = "...";
     //将返回结果展示到页面上
-    const data = document.getElementById("translate-textarea").value;
+    const data = translateTextarea.value;
     const result = await fetchLLM(data);
     resultSpan.textContent = result;
     translateButton.textContent = "翻译";
