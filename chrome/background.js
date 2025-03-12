@@ -88,42 +88,65 @@ function replaceSelectedText(targetLanguage) {
   }
 }
 
+// 将 chrome.storage.local.get 封装为返回 Promise 的函数
+function getStorageData(keys) {
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.get(keys, function (result) {
+      if (chrome.runtime.lastError) {
+        return reject(chrome.runtime.lastError);
+      }
+      resolve(result);
+    });
+  });
+}
+
 async function fetchLLM(data) {
   try {
-    const response = await fetch("https://example.com", {
-      headers: {
-        accept: "application/json",
-        "api-key": "<YOUR API KEY>",
-        "content-type": "application/json",
-      },
-      referrerPolicy: "strict-origin-when-cross-origin",
-      body: JSON.stringify({
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: `请帮我把这个: ${data} 翻译为专业的英语, 注意直接输出你翻译的结果即可, 不需要任何其他的内容!`,
-              },
-            ],
-          },
-        ],
-      }),
-      method: "POST",
-      mode: "cors",
-      credentials: "omit",
-    });
+    // 等待数据获取完成
+    const {
+      endpoint = "",
+      apikey = "",
+      target = "",
+    } = await getStorageData(["endpoint", "apikey", "target"]);
+    if (!endpoint || !apikey || !target) {
+      return "关键参数没有设置完全";
+    } else {
+      const language = target == "cn" ? "中文" : "英语";
+      const response = await fetch(`${endpoint}`, {
+        headers: {
+          accept: "application/json",
+          "api-key": `${apikey}`,
+          "content-type": "application/json",
+        },
+        referrerPolicy: "strict-origin-when-cross-origin",
+        body: JSON.stringify({
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: `请帮我把这个: ${data} 翻译为专业的${language}, 注意直接输出你翻译的结果即可, 不需要任何其他的内容!`,
+                },
+              ],
+            },
+          ],
+        }),
+        method: "POST",
+        mode: "cors",
+        credentials: "omit",
+      });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      // 确保返回翻译结果
+      return result.choices[0].message.content;
     }
-
-    const result = await response.json();
-    return result.choices[0].message.content; // 确保返回翻译结果
   } catch (error) {
-    console.error("Something bad happened:", error);
-    // 遇到错误时返回 null
+    console.error("获取存储数据出错：", error);
     return null;
   }
 }

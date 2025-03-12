@@ -3,7 +3,7 @@
   "name": "LLM translator",
   "version": "1.0",
   "description": "大语言模型的文本翻译插件",
-  "permissions": ["activeTab", "scripting", "contextMenus"],
+  "permissions": ["activeTab", "scripting", "contextMenus", "storage"],
   "background": {
     "service_worker": "background.js"
   },
