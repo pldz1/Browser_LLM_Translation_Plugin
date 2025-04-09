@@ -2,6 +2,7 @@ document.addEventListener("DOMContentLoaded", function () {
   // 尝试获取所有需要的 DOM 元素
   const endpointInput = document.getElementById("endpoint-input");
   const apikeyInput = document.getElementById("apikey-input");
+  const modelNameInput = document.getElementById("modelname-input");
   const targetSelect = document.getElementById("target-language-select");
   const translateButton = document.getElementById("start-translate");
   const translateTextarea = document.getElementById("translate-textarea");
@@ -12,6 +13,7 @@ document.addEventListener("DOMContentLoaded", function () {
   if (
     !endpointInput ||
     !apikeyInput ||
+    !modelNameInput ||
     !targetSelect ||
     !translateButton ||
     !translateTextarea ||
@@ -25,13 +27,16 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // 从 chrome 存储中读取保存的数据，并填充到对应输入框
   chrome.storage.local.get(
-    ["endpoint", "apikey", "target", "replaceText"],
+    ["endpoint", "apikey", "target", "modelName", "replaceText"],
     function (result) {
       if (result.endpoint) {
         endpointInput.value = result.endpoint;
       }
       if (result.apikey) {
         apikeyInput.value = result.apikey;
+      }
+      if (result.modelName) {
+        modelNameInput.value = result.modelName;
       }
       if (result.target) {
         targetSelect.value = result.target;
@@ -55,6 +60,14 @@ document.addEventListener("DOMContentLoaded", function () {
     const apikey = apikeyInput.value;
     chrome.storage.local.set({ apikey: apikey }, function () {
       console.log("API Key 更新成功: ", apikey);
+    });
+  });
+
+  // 当 模型名字的 输入框内容发生变化时，自动保存到 chrome 存储
+  modelNameInput.addEventListener("change", function () {
+    const modelName = modelNameInput.value;
+    chrome.storage.local.set({ modelName: modelName }, function () {
+      console.log("modelName 更新成功: ", modelName);
     });
   });
 
@@ -104,26 +117,28 @@ async function fetchLLM(data) {
       endpoint = "",
       apikey = "",
       target = "",
-    } = await getStorageData(["endpoint", "apikey", "target"]);
+      modelName = "",
+    } = await getStorageData(["endpoint", "apikey", "target", "modelName"]);
     if (!endpoint || !apikey || !target) {
       return "关键参数没有设置完全";
     } else {
-      const language = target == "cn" ? "中文" : "英语";
       const response = await fetch(`${endpoint}`, {
         headers: {
           accept: "application/json",
           "api-key": `${apikey}`,
           "content-type": "application/json",
+          authorization: `Bearer ${apikey}`,
         },
         referrerPolicy: "strict-origin-when-cross-origin",
         body: JSON.stringify({
+          ...(modelName && { model: modelName }),
           messages: [
             {
               role: "user",
               content: [
                 {
                   type: "text",
-                  text: `请帮我把这个: ${data} 翻译为专业的${language}, 注意直接输出你翻译的结果即可, 不需要任何其他的内容!`,
+                  text: `你是一个专业的${target}翻译助手, 请帮我把这个: '''${data}''' 翻译为另外一种语言, 注意直接输出你翻译的结果即可, 不需要任何其他的内容!`,
                 },
               ],
             },

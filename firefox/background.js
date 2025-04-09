@@ -1,7 +1,7 @@
 browser.runtime.onInstalled.addListener(() => {
   browser.contextMenus.create({
     id: "llm_translate_contextmenu",
-    title: "Using LLM translate selected content.",
+    title: "翻译选中的文本(LLM Translation)",
     contexts: ["selection"],
   });
 });
@@ -158,30 +158,56 @@ function processTranslation(translation, replaceFlag) {
 
       // 添加关闭按钮
       const closeButton = document.createElement("button");
-      closeButton.textContent = "X";
+      closeButton.innerHTML = `<svg width="16px" height="16px" viewBox="0 0 0.32 0.32" xmlns="http://www.w3.org/2000/svg"><path fill="#000000" fill-rule="evenodd" d="M0.226 0.066a0.02 0.02 0 1 1 0.028 0.028L0.188 0.16l0.066 0.066a0.02 0.02 0 0 1 -0.028 0.028L0.16 0.188l-0.066 0.066a0.02 0.02 0 0 1 -0.028 -0.028L0.132 0.16 0.066 0.094a0.02 0.02 0 0 1 0.028 -0.028L0.16 0.132z"/></svg>`;
       closeButton.style.cssText = `
-            position: absolute;
-            top: 0;
-            right: 0;
-            cursor: pointer;
-            border: none;
-            background: transparent;
-            font-size: 12px;
-            font-weight: bold;
-        `;
+          position: absolute;
+          top: 4px;
+          right: 4px;
+          cursor: pointer;
+          border: none;
+          font-size: 12px;
+          font-weight: bold;`;
       closeButton.addEventListener("click", () => {
         div.remove();
       });
 
+      // 添加拷贝按钮
+      const copyButton = document.createElement("button");
+      copyButton.innerHTML = `<svg width="16px" height="16px" viewBox="0 0 0.32 0.32" xmlns="http://www.w3.org/2000/svg" fill="#000000"><path fill-rule="evenodd" clip-rule="evenodd" d="M0.08 0.08 0.1 0.06h0.108L0.28 0.132V0.28L0.26 0.3h-0.16L0.08 0.28zm0.18 0.06L0.2 0.08H0.1v0.2h0.16z"/><path fill-rule="evenodd" clip-rule="evenodd" d="M0.06 0.02 0.04 0.04v0.2l0.02 0.02V0.04h0.128L0.168 0.02z"/></svg>`;
+      copyButton.style.cssText = `
+          position: absolute;
+          top: 4px;
+          right: 32px;
+          cursor: pointer;
+          border: none;
+          font-size: 12px;
+          font-weight: bold;`;
+
+      copyButton.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(translation);
+          copyButton.innerHTML = `<svg version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 16 16" style="enable-background:new 0 0 240.608 240.608;" xml:space="preserve" width="16" height="16"><path style="fill:#020202;" d="m13.884 1.993 2.116 2.116L6.102 14.007 0 7.905l2.116 -2.116 3.986 3.986z"/></svg>`;
+          setInterval(() => {
+            copyButton.innerHTML = `<svg width="16px" height="16px" viewBox="0 0 0.32 0.32" xmlns="http://www.w3.org/2000/svg" fill="#000000"><path fill-rule="evenodd" clip-rule="evenodd" d="M0.08 0.08 0.1 0.06h0.108L0.28 0.132V0.28L0.26 0.3h-0.16L0.08 0.28zm0.18 0.06L0.2 0.08H0.1v0.2h0.16z"/><path fill-rule="evenodd" clip-rule="evenodd" d="M0.06 0.02 0.04 0.04v0.2l0.02 0.02V0.04h0.128L0.168 0.02z"/></svg>`;
+          }, 3000);
+        } catch (err) {
+          console.error("复制失败", err);
+        }
+      });
+
       div.style.cssText = `
-            position: absolute;
-            background-color: yellow;
-            border: 1px solid black;
-            padding: 20px 5px 5px 5px;
-            box-sizing: border-box;
-            max-width: 400px;
-        `;
+          position: absolute;
+          background-color: #ffffff;
+          border: 1px solid #00000040;
+          padding: 25px 5px 5px 5px;
+          box-sizing: border-box;
+          max-width: 400px;
+          min-width: 64px;
+          z-index: 999999;
+      `;
+
       div.appendChild(closeButton);
+      div.appendChild(copyButton);
 
       // 设置 div 的位置
       div.style.top = rect.bottom + window.scrollY + "px";
@@ -208,26 +234,27 @@ async function fetchLLM(data) {
       endpoint = "",
       apikey = "",
       target = "",
-    } = await getStorageData(["endpoint", "apikey", "target"]);
+      modelName = "",
+    } = await getStorageData(["endpoint", "apikey", "target", "modelName"]);
     if (!endpoint || !apikey || !target) {
       return "关键参数没有设置完全";
     }
-
-    const language = target === "cn" ? "中文" : "英语";
     const response = await fetch(endpoint, {
       headers: {
         Accept: "application/json",
-        "api-key": apikey,
+        "api-key": `${apikey}`,
         "Content-Type": "application/json",
+        authorization: `Bearer ${apikey}`,
       },
       body: JSON.stringify({
+        ...(modelName && { model: modelName }),
         messages: [
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: `请帮我把这个: ${data} 翻译为专业的${language}, 直接输出翻译结果!`,
+                text: `你是一个专业的${target}翻译助手, 请帮我把这个: '''${data}''' 翻译为另外一种语言, 注意直接输出你翻译的结果即可, 不需要任何其他的内容!`,
               },
             ],
           },
