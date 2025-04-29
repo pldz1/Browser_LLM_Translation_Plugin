@@ -65,6 +65,13 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 });
 
+function getUserContent(target, data) {
+  if (target == "editing_assistant")
+    return `你是一个专业的中文和英语的润色助手, 请帮我把这个: '''${data}''' 的主体的内容, 润色成专业的官方文档和手册的表达, 注意直接输出你润色的结果即可, 不需要任何其他的内容!`;
+  else
+    return `你是一个专业的中文和英语互相翻译的翻译助手, 请帮我把这个: '''${data}''' 的主体的内容, 翻译为另外一种语言, 注意直接输出你翻译的结果即可, 不需要任何其他的内容!`;
+}
+
 async function fetchLLM(data) {
   const {
     endpoint = "",
@@ -74,6 +81,7 @@ async function fetchLLM(data) {
   } = await getStorageData(["endpoint", "apikey", "target", "modelName"]);
   if (!endpoint || !apikey || !target) return "缺少参数";
 
+  const contentText = getUserContent(target, data);
   const response = await fetch(endpoint, {
     method: "POST",
     headers: {
@@ -90,7 +98,7 @@ async function fetchLLM(data) {
           content: [
             {
               type: "text",
-              text: `你是一个专业的${target}翻译助手, 请帮我把这个: '''${data}''' 翻译为另外一种语言, 注意直接输出你翻译的结果即可, 不需要任何其他的内容!`,
+              text: contentText,
             },
           ],
         },

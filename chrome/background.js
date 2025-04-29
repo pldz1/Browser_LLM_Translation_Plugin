@@ -65,38 +65,21 @@ async function translateText() {
 
 // 在选中区域旁边显示加载动画
 function showLoadingIndicator() {
-  const selection = window.getSelection();
-  if (selection.rangeCount > 0) {
-    const range = selection.getRangeAt(0);
-    const rect = range.getBoundingClientRect();
-    const loader = document.createElement("div");
-    loader.id = "llm_translate_loader";
-    loader.innerHTML = "🔄";
-    loader.style.cssText = `
-      position: absolute;
-      top: ${rect.bottom + window.scrollY + 5}px;
-      left: ${rect.left + window.scrollX}px;
-      background: #0b57d0;
-      padding: 5px 10px;
-      border-radius: 5px;
-      font-size: 12px;
-      font-weight: bold;
-      color: black;
-      z-index: 10000;
-      box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.3);
-      transition: opacity 0.3s ease-out;
-    `;
-    document.body.appendChild(loader);
-    return selection.toString();
-  }
-  return null;
+  const style = document.createElement("style");
+  style.id = "temporary-selection-style";
+  style.textContent = `
+    ::selection {
+      background: yellow !important;
+    }
+  `;
+  document.head.appendChild(style);
 }
 
 // 移除加载动画
 function removeLoader() {
-  const loader = document.getElementById("llm_translate_loader");
-  if (loader) {
-    loader.remove();
+  const styleTag = document.getElementById("temporary-selection-style");
+  if (styleTag) {
+    styleTag.remove();
   }
 }
 
@@ -207,7 +190,7 @@ function processTranslation(translation, replaceFlag) {
           box-sizing: border-box;
           max-width: 400px;
           min-width: 64px;
-          z-index: 999999;
+          z-index: 10000000001;
       `;
 
       div.appendChild(closeButton);
@@ -234,6 +217,13 @@ function getStorageData(keys) {
   });
 }
 
+function getUserContent(target, data) {
+  if (target == "editing_assistant")
+    return `你是一个专业的中文和英语的润色助手, 请帮我把这个: '''${data}''' 的主体的内容, 润色成专业的官方文档和手册的表达, 注意直接输出你润色的结果即可, 不需要任何其他的内容!`;
+  else
+    return `你是一个专业的中文和英语互相翻译的翻译助手, 请帮我把这个: '''${data}''' 的主体的内容, 翻译为另外一种语言, 注意直接输出你翻译的结果即可, 不需要任何其他的内容!`;
+}
+
 async function fetchLLM(data) {
   try {
     // 从 storage 中读取接口、apikey 和目标语言
@@ -246,6 +236,7 @@ async function fetchLLM(data) {
     if (!endpoint || !apikey || !target) {
       return "关键参数没有设置完全";
     } else {
+      const contentText = getUserContent(target, data);
       const response = await fetch(`${endpoint}`, {
         headers: {
           accept: "application/json",
@@ -262,7 +253,7 @@ async function fetchLLM(data) {
               content: [
                 {
                   type: "text",
-                  text: `你是一个专业的${target}翻译助手, 请帮我把这个: '''${data}''' 翻译为另外一种语言, 注意直接输出你翻译的结果即可, 不需要任何其他的内容!`,
+                  text: contentText,
                 },
               ],
             },
