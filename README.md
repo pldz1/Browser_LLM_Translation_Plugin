@@ -4,13 +4,35 @@
 
 ## 👀 预览效果
 
-![popup html](docs/popup.html.png)
+![popup html](https://github.com/pldz1/Browser_LLM_Translation_Plugin/blob/main/docs/popup.html.png)
 
-![firefox 预览](docs/firefox_preview.png)
+![firefox 预览](https://github.com/pldz1/Browser_LLM_Translation_Plugin/blob/main/docs/firefox_preview.png)
 
-![chrome 预览](docs/chrome_preview.png)
+![chrome 预览](https://github.com/pldz1/Browser_LLM_Translation_Plugin/blob/main/docs/chrome_preview.png)
 
 ## ✨ 功能特性
+
+---
+
+## v4.0.0
+
+- 🎨 **修改了整个的 popup.html 的样式**
+
+---
+
+## v3.0.0
+
+- 🐛 **修复显示翻译时候的图层可能不是最上层的问题**
+- 🎨 **被翻译文字的样式改为黄色高亮**
+
+---
+
+## v2.0.0
+
+- 🚀 **更多 API**: 增加模型参数，支持更多的模型的 `fetch` API。
+- ☑ **智能互译**: 直接在中文和英语之间智能翻译。
+- 🎨 **样式优化**: 显示图层和背景颜色以及边框。
+- 💯 **拷贝内容**: 新增按钮拷贝翻译的内容。
 
 ---
 
@@ -23,13 +45,6 @@
 - 📂 **本地存储配置**：保存 API Key 和目标语言，方便长期使用。
 
 ---
-
-## v2.0.0
-
-- 🚀 **更多 API**: 增加模型参数，支持更多的模型的 `fetch` API。
-- ☑ **智能互译**: 直接在中文和英语之间智能翻译。
-- 🎨 **样式优化**: 显示图层和背景颜色以及边框。
-- 💯 **拷贝内容**: 新增按钮拷贝翻译的内容。
 
 ---
 
