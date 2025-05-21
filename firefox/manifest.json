@@ -1,11 +1,11 @@
 {
   "manifest_version": 2,
   "name": "LLM Translator",
-  "version": "1.0",
+  "version": "1.0.4",
   "description": "大语言模型的文本翻译插件",
   "permissions": ["activeTab", "contextMenus", "storage", "tabs"],
   "background": {
-    "scripts": ["background.js"]
+    "scripts": ["function.js", "background.js"]
   },
   "commands": {
     "llm_translate_shortcut": {
