@@ -4,11 +4,11 @@
 
 ## 👀 预览效果
 
-![popup html](https://github.com/pldz1/Browser_LLM_Translation_Plugin/blob/main/docs/popup.html.png)
+![popup html](docs/popup.html.png)
 
-![firefox 预览](https://github.com/pldz1/Browser_LLM_Translation_Plugin/blob/main/docs/firefox_preview.png)
+![firefox 预览](docs/firefox_preview.png)
 
-![chrome 预览](https://github.com/pldz1/Browser_LLM_Translation_Plugin/blob/main/docs/chrome_preview.png)
+![chrome 预览](docs/chrome_preview.png)
 
 ## ✨ 功能特性
 
